@@ -1,0 +1,1292 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "name": "dopoem.ipynb",
+      "provenance": [],
+      "collapsed_sections": [],
+      "authorship_tag": "ABX9TyNmsqX74gnuy82PItJaow3h",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    },
+    "accelerator": "GPU"
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/doguma/domet/blob/main/01_Collecting_TheMet_Data\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "CRBaJTsWLUjB"
+      },
+      "source": [
+        "import os,cv2,keras\n",
+        "import pandas as pd\n",
+        "import matplotlib.pyplot as plt\n",
+        "import numpy as np\n",
+        "import tensorflow as tf"
+      ],
+      "execution_count": 1,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 925
+        },
+        "id": "kBIEthy12B9Q",
+        "outputId": "d39448ba-09ed-47de-b812-a532f383fe84"
+      },
+      "source": [
+        "! pip install selenium"
+      ],
+      "execution_count": 22,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Collecting selenium\n",
+            "  Downloading selenium-4.0.0-py3-none-any.whl (954 kB)\n",
+            "\u001b[K     |████████████████████████████████| 954 kB 5.2 MB/s \n",
+            "\u001b[?25hCollecting trio-websocket~=0.9\n",
+            "  Downloading trio_websocket-0.9.2-py3-none-any.whl (16 kB)\n",
+            "Collecting urllib3[secure]~=1.26\n",
+            "  Downloading urllib3-1.26.7-py2.py3-none-any.whl (138 kB)\n",
+            "\u001b[K     |████████████████████████████████| 138 kB 44.7 MB/s \n",
+            "\u001b[?25hCollecting trio~=0.17\n",
+            "  Downloading trio-0.19.0-py3-none-any.whl (356 kB)\n",
+            "\u001b[K     |████████████████████████████████| 356 kB 30.2 MB/s \n",
+            "\u001b[?25hCollecting sniffio\n",
+            "  Downloading sniffio-1.2.0-py3-none-any.whl (10 kB)\n",
+            "Requirement already satisfied: idna in /usr/local/lib/python3.7/dist-packages (from trio~=0.17->selenium) (2.10)\n",
+            "Collecting async-generator>=1.9\n",
+            "  Downloading async_generator-1.10-py3-none-any.whl (18 kB)\n",
+            "Requirement already satisfied: sortedcontainers in /usr/local/lib/python3.7/dist-packages (from trio~=0.17->selenium) (2.4.0)\n",
+            "Requirement already satisfied: attrs>=19.2.0 in /usr/local/lib/python3.7/dist-packages (from trio~=0.17->selenium) (21.2.0)\n",
+            "Collecting outcome\n",
+            "  Downloading outcome-1.1.0-py2.py3-none-any.whl (9.7 kB)\n",
+            "Collecting wsproto>=0.14\n",
+            "  Downloading wsproto-1.0.0-py3-none-any.whl (24 kB)\n",
+            "Collecting cryptography>=1.3.4\n",
+            "  Downloading cryptography-35.0.0-cp36-abi3-manylinux_2_24_x86_64.whl (3.5 MB)\n",
+            "\u001b[K     |████████████████████████████████| 3.5 MB 29.2 MB/s \n",
+            "\u001b[?25hRequirement already satisfied: certifi in /usr/local/lib/python3.7/dist-packages (from urllib3[secure]~=1.26->selenium) (2021.5.30)\n",
+            "Collecting pyOpenSSL>=0.14\n",
+            "  Downloading pyOpenSSL-21.0.0-py2.py3-none-any.whl (55 kB)\n",
+            "\u001b[K     |████████████████████████████████| 55 kB 3.3 MB/s \n",
+            "\u001b[?25hRequirement already satisfied: cffi>=1.12 in /usr/local/lib/python3.7/dist-packages (from cryptography>=1.3.4->urllib3[secure]~=1.26->selenium) (1.14.6)\n",
+            "Requirement already satisfied: pycparser in /usr/local/lib/python3.7/dist-packages (from cffi>=1.12->cryptography>=1.3.4->urllib3[secure]~=1.26->selenium) (2.20)\n",
+            "Requirement already satisfied: six>=1.5.2 in /usr/local/lib/python3.7/dist-packages (from pyOpenSSL>=0.14->urllib3[secure]~=1.26->selenium) (1.15.0)\n",
+            "Collecting h11<1,>=0.9.0\n",
+            "  Downloading h11-0.12.0-py3-none-any.whl (54 kB)\n",
+            "\u001b[K     |████████████████████████████████| 54 kB 3.0 MB/s \n",
+            "\u001b[?25hInstalling collected packages: sniffio, outcome, h11, cryptography, async-generator, wsproto, urllib3, trio, pyOpenSSL, trio-websocket, selenium\n",
+            "  Attempting uninstall: urllib3\n",
+            "    Found existing installation: urllib3 1.24.3\n",
+            "    Uninstalling urllib3-1.24.3:\n",
+            "      Successfully uninstalled urllib3-1.24.3\n",
+            "\u001b[31mERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.\n",
+            "requests 2.23.0 requires urllib3!=1.25.0,!=1.25.1,<1.26,>=1.21.1, but you have urllib3 1.26.7 which is incompatible.\n",
+            "firebase-admin 4.4.0 requires google-api-core[grpc]<2.0.0dev,>=1.14.0; platform_python_implementation != \"PyPy\", but you have google-api-core 2.2.2 which is incompatible.\n",
+            "datascience 0.10.6 requires folium==0.2.1, but you have folium 0.8.3 which is incompatible.\u001b[0m\n",
+            "Successfully installed async-generator-1.10 cryptography-35.0.0 h11-0.12.0 outcome-1.1.0 pyOpenSSL-21.0.0 selenium-4.0.0 sniffio-1.2.0 trio-0.19.0 trio-websocket-0.9.2 urllib3-1.26.7 wsproto-1.0.0\n"
+          ]
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "application/vnd.colab-display-data+json": {
+              "pip_warning": {
+                "packages": [
+                  "urllib3"
+                ]
+              }
+            }
+          },
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "HLqlV0w111TO"
+      },
+      "source": [
+        "import re\n",
+        "import sys\n",
+        "import os, time\n",
+        "from selenium import webdriver\n",
+        "from selenium.webdriver.common.keys import Keys\n",
+        "from bs4 import BeautifulSoup\n",
+        "\n",
+        "\n",
+        "def start_chromedriver():\n",
+        "    sys.path.insert(0,'/usr/lib/chromium-browser/chromedriver')\n",
+        "    chrome_options = webdriver.ChromeOptions()\n",
+        "    chrome_options.add_argument('--headless')\n",
+        "    chrome_options.add_argument('--no-sandbox')\n",
+        "    chrome_options.add_argument('--disable-dev-shm-usage')\n",
+        "\n",
+        "    driver = webdriver.Chrome('chromedriver', options=chrome_options)\n",
+        "    \n",
+        "    return driver"
+      ],
+      "execution_count": 46,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "OfhQ6OcdMgxT"
+      },
+      "source": [
+        "from __future__ import print_function\n",
+        "import binascii\n",
+        "import struct\n",
+        "from PIL import Image\n",
+        "import numpy as np\n",
+        "import scipy\n",
+        "import scipy.misc\n",
+        "import scipy.cluster\n",
+        "\n",
+        "# NUM_CLUSTERS = 5\n",
+        "\n",
+        "# print('reading image')\n",
+        "# im = Image.open('nature.png')\n",
+        "# im = im.resize((150, 150))      # optional, to reduce time\n",
+        "# ar = np.asarray(im)\n",
+        "# shape = ar.shape\n",
+        "# ar = ar.reshape(scipy.product(shape[:2]), shape[2]).astype(float)\n",
+        "\n",
+        "# print('finding clusters')\n",
+        "# codes, dist = scipy.cluster.vq.kmeans(ar, NUM_CLUSTERS)\n",
+        "# print('cluster centres:\\n', codes)\n",
+        "\n",
+        "# vecs, dist = scipy.cluster.vq.vq(ar, codes)         # assign codes\n",
+        "# counts, bins = scipy.histogram(vecs, len(codes))    # count occurrences\n",
+        "\n",
+        "# index_max = scipy.argmax(counts)                    # find most frequent\n",
+        "# peak = codes[index_max]\n",
+        "# colour = binascii.hexlify(bytearray(int(c) for c in peak)).decode('ascii')\n",
+        "# print('most frequent is %s (#%s)' % (peak, colour))"
+      ],
+      "execution_count": 3,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "IikHObzCPsKu",
+        "outputId": "c725c423-96da-459d-a747-22e5cfd51aa7"
+      },
+      "source": [
+        "peak"
+      ],
+      "execution_count": 26,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "array([ 67.74974671, 105.18604357, 101.67540527, 255.        ])"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 26
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "YW-NeGJfPtim"
+      },
+      "source": [
+        "colour = '#' + colour"
+      ],
+      "execution_count": 5,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "vHhutj-zOA1H"
+      },
+      "source": [
+        "from PIL import ImageColor\n",
+        "\n",
+        "rgb = ImageColor.getcolor(colour, \"RGB\")"
+      ],
+      "execution_count": 7,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "hbiKE8i2Oq7l",
+        "outputId": "fb4fff7d-cae7-49c9-8422-044c830e3a1c"
+      },
+      "source": [
+        "! pip install webcolors"
+      ],
+      "execution_count": 8,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Requirement already satisfied: webcolors in /usr/local/lib/python3.7/dist-packages (1.11.1)\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "NSQ-T3HAOqAW"
+      },
+      "source": [
+        "import cv2\n",
+        "import sys\n",
+        "import glob\n",
+        "import webcolors\n",
+        "import numpy as np\n",
+        "import matplotlib.pyplot as plt\n",
+        "\n",
+        "from sklearn.cluster import KMeans\n",
+        "from sklearn.metrics import mean_squared_error\n",
+        "from collections import Counter\n",
+        "\n",
+        "\n",
+        "# Source: https://gist.github.com/kb22/f17e59a79d4fcca02188c23cca932be5#file-rgb2hex-py\n",
+        "def rgb2hex(c):\n",
+        "    return \"#{:02x}{:02x}{:02x}\".format(int(c[0]), int(c[1]), int(c[2]))  # format(int(c[0]), int(c[1]), int(c[2]))\n",
+        "\n",
+        "\n",
+        "def hex2name(c):\n",
+        "    h_color = '#{:02x}{:02x}{:02x}'.format(int(c[0]), int(c[1]), int(c[2]))\n",
+        "\n",
+        "    rms_lst = []\n",
+        "    for img_clr, img_hex in webcolors.CSS3_NAMES_TO_HEX.items():\n",
+        "        cur_clr = webcolors.hex_to_rgb(img_hex)\n",
+        "        rmse = np.sqrt(mean_squared_error(c, cur_clr))\n",
+        "        rms_lst.append(rmse)\n",
+        "\n",
+        "    closest_color = rms_lst.index(min(rms_lst))\n",
+        "\n",
+        "    nm = list(webcolors.CSS3_NAMES_TO_HEX.items())[closest_color][0]\n",
+        "    \n",
+        "    return nm"
+      ],
+      "execution_count": 9,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 35
+        },
+        "id": "lQ5G2UPuPJkH",
+        "outputId": "f575fafa-9107-4c59-fc87-28c58b303e9a"
+      },
+      "source": [
+        "hex2name(rgb)"
+      ],
+      "execution_count": 58,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "application/vnd.google.colaboratory.intrinsic+json": {
+              "type": "string"
+            },
+            "text/plain": [
+              "'dimgray'"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 58
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "pYtexnPxSBUR",
+        "outputId": "0266d752-23fc-413b-986f-f475638e64e5"
+      },
+      "source": [
+        "! pip install -e git+https://github.com/SohierDane/BigQuery_Helper#egg=bq_helper"
+      ],
+      "execution_count": 10,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Obtaining bq_helper from git+https://github.com/SohierDane/BigQuery_Helper#egg=bq_helper\n",
+            "  Updating ./src/bq-helper clone\n",
+            "  Running command git fetch -q --tags\n",
+            "  Running command git reset --hard -q 8615a7f6c1663e7f2d48aa2b32c2dbcb600a440f\n",
+            "Requirement already satisfied: pandas in /usr/local/lib/python3.7/dist-packages (from bq_helper) (1.1.5)\n",
+            "Requirement already satisfied: google-cloud-bigquery in /usr/local/lib/python3.7/dist-packages (from bq_helper) (2.30.1)\n",
+            "Requirement already satisfied: packaging>=14.3 in /usr/local/lib/python3.7/dist-packages (from google-cloud-bigquery->bq_helper) (21.0)\n",
+            "Requirement already satisfied: google-cloud-core<3.0.0dev,>=1.4.1 in /usr/local/lib/python3.7/dist-packages (from google-cloud-bigquery->bq_helper) (2.1.0)\n",
+            "Requirement already satisfied: python-dateutil<3.0dev,>=2.7.2 in /usr/local/lib/python3.7/dist-packages (from google-cloud-bigquery->bq_helper) (2.8.2)\n",
+            "Requirement already satisfied: grpcio<2.0dev,>=1.38.1 in /usr/local/lib/python3.7/dist-packages (from google-cloud-bigquery->bq_helper) (1.41.1)\n",
+            "Requirement already satisfied: proto-plus>=1.10.0 in /usr/local/lib/python3.7/dist-packages (from google-cloud-bigquery->bq_helper) (1.19.7)\n",
+            "Requirement already satisfied: requests<3.0.0dev,>=2.18.0 in /usr/local/lib/python3.7/dist-packages (from google-cloud-bigquery->bq_helper) (2.23.0)\n",
+            "Requirement already satisfied: google-api-core[grpc]<3.0.0dev,>=1.29.0 in /usr/local/lib/python3.7/dist-packages (from google-cloud-bigquery->bq_helper) (2.2.2)\n",
+            "Requirement already satisfied: protobuf>=3.12.0 in /usr/local/lib/python3.7/dist-packages (from google-cloud-bigquery->bq_helper) (3.19.1)\n",
+            "Requirement already satisfied: google-resumable-media<3.0dev,>=0.6.0 in /usr/local/lib/python3.7/dist-packages (from google-cloud-bigquery->bq_helper) (2.1.0)\n",
+            "Requirement already satisfied: setuptools>=40.3.0 in /usr/local/lib/python3.7/dist-packages (from google-api-core[grpc]<3.0.0dev,>=1.29.0->google-cloud-bigquery->bq_helper) (57.4.0)\n",
+            "Requirement already satisfied: google-auth<3.0dev,>=1.25.0 in /usr/local/lib/python3.7/dist-packages (from google-api-core[grpc]<3.0.0dev,>=1.29.0->google-cloud-bigquery->bq_helper) (1.35.0)\n",
+            "Requirement already satisfied: googleapis-common-protos<2.0dev,>=1.52.0 in /usr/local/lib/python3.7/dist-packages (from google-api-core[grpc]<3.0.0dev,>=1.29.0->google-cloud-bigquery->bq_helper) (1.53.0)\n",
+            "Requirement already satisfied: grpcio-status<2.0dev,>=1.33.2 in /usr/local/lib/python3.7/dist-packages (from google-api-core[grpc]<3.0.0dev,>=1.29.0->google-cloud-bigquery->bq_helper) (1.41.1)\n",
+            "Requirement already satisfied: cachetools<5.0,>=2.0.0 in /usr/local/lib/python3.7/dist-packages (from google-auth<3.0dev,>=1.25.0->google-api-core[grpc]<3.0.0dev,>=1.29.0->google-cloud-bigquery->bq_helper) (4.2.4)\n",
+            "Requirement already satisfied: six>=1.9.0 in /usr/local/lib/python3.7/dist-packages (from google-auth<3.0dev,>=1.25.0->google-api-core[grpc]<3.0.0dev,>=1.29.0->google-cloud-bigquery->bq_helper) (1.15.0)\n",
+            "Requirement already satisfied: pyasn1-modules>=0.2.1 in /usr/local/lib/python3.7/dist-packages (from google-auth<3.0dev,>=1.25.0->google-api-core[grpc]<3.0.0dev,>=1.29.0->google-cloud-bigquery->bq_helper) (0.2.8)\n",
+            "Requirement already satisfied: rsa<5,>=3.1.4 in /usr/local/lib/python3.7/dist-packages (from google-auth<3.0dev,>=1.25.0->google-api-core[grpc]<3.0.0dev,>=1.29.0->google-cloud-bigquery->bq_helper) (4.7.2)\n",
+            "Requirement already satisfied: google-crc32c<2.0dev,>=1.0 in /usr/local/lib/python3.7/dist-packages (from google-resumable-media<3.0dev,>=0.6.0->google-cloud-bigquery->bq_helper) (1.3.0)\n",
+            "Requirement already satisfied: pyparsing>=2.0.2 in /usr/local/lib/python3.7/dist-packages (from packaging>=14.3->google-cloud-bigquery->bq_helper) (2.4.7)\n",
+            "Requirement already satisfied: pyasn1<0.5.0,>=0.4.6 in /usr/local/lib/python3.7/dist-packages (from pyasn1-modules>=0.2.1->google-auth<3.0dev,>=1.25.0->google-api-core[grpc]<3.0.0dev,>=1.29.0->google-cloud-bigquery->bq_helper) (0.4.8)\n",
+            "Requirement already satisfied: urllib3!=1.25.0,!=1.25.1,<1.26,>=1.21.1 in /usr/local/lib/python3.7/dist-packages (from requests<3.0.0dev,>=2.18.0->google-cloud-bigquery->bq_helper) (1.24.3)\n",
+            "Requirement already satisfied: chardet<4,>=3.0.2 in /usr/local/lib/python3.7/dist-packages (from requests<3.0.0dev,>=2.18.0->google-cloud-bigquery->bq_helper) (3.0.4)\n",
+            "Requirement already satisfied: certifi>=2017.4.17 in /usr/local/lib/python3.7/dist-packages (from requests<3.0.0dev,>=2.18.0->google-cloud-bigquery->bq_helper) (2021.5.30)\n",
+            "Requirement already satisfied: idna<3,>=2.5 in /usr/local/lib/python3.7/dist-packages (from requests<3.0.0dev,>=2.18.0->google-cloud-bigquery->bq_helper) (2.10)\n",
+            "Requirement already satisfied: numpy>=1.15.4 in /usr/local/lib/python3.7/dist-packages (from pandas->bq_helper) (1.19.5)\n",
+            "Requirement already satisfied: pytz>=2017.2 in /usr/local/lib/python3.7/dist-packages (from pandas->bq_helper) (2018.9)\n",
+            "Installing collected packages: bq-helper\n",
+            "  Attempting uninstall: bq-helper\n",
+            "    Found existing installation: bq-helper 0.4.1\n",
+            "    Can't uninstall 'bq-helper'. No files were found to uninstall.\n",
+            "  Running setup.py develop for bq-helper\n",
+            "Successfully installed bq-helper-0.4.1\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "qyelTL6uSV5G",
+        "outputId": "7a07d49e-cf74-485b-8606-7faa930267ea"
+      },
+      "source": [
+        "! pip install --upgrade google-cloud-bigquery"
+      ],
+      "execution_count": 11,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Requirement already satisfied: google-cloud-bigquery in /usr/local/lib/python3.7/dist-packages (2.30.1)\n",
+            "Requirement already satisfied: packaging>=14.3 in /usr/local/lib/python3.7/dist-packages (from google-cloud-bigquery) (21.0)\n",
+            "Requirement already satisfied: grpcio<2.0dev,>=1.38.1 in /usr/local/lib/python3.7/dist-packages (from google-cloud-bigquery) (1.41.1)\n",
+            "Requirement already satisfied: google-cloud-core<3.0.0dev,>=1.4.1 in /usr/local/lib/python3.7/dist-packages (from google-cloud-bigquery) (2.1.0)\n",
+            "Requirement already satisfied: python-dateutil<3.0dev,>=2.7.2 in /usr/local/lib/python3.7/dist-packages (from google-cloud-bigquery) (2.8.2)\n",
+            "Requirement already satisfied: proto-plus>=1.10.0 in /usr/local/lib/python3.7/dist-packages (from google-cloud-bigquery) (1.19.7)\n",
+            "Requirement already satisfied: google-api-core[grpc]<3.0.0dev,>=1.29.0 in /usr/local/lib/python3.7/dist-packages (from google-cloud-bigquery) (2.2.2)\n",
+            "Requirement already satisfied: google-resumable-media<3.0dev,>=0.6.0 in /usr/local/lib/python3.7/dist-packages (from google-cloud-bigquery) (2.1.0)\n",
+            "Requirement already satisfied: protobuf>=3.12.0 in /usr/local/lib/python3.7/dist-packages (from google-cloud-bigquery) (3.19.1)\n",
+            "Requirement already satisfied: requests<3.0.0dev,>=2.18.0 in /usr/local/lib/python3.7/dist-packages (from google-cloud-bigquery) (2.23.0)\n",
+            "Requirement already satisfied: google-auth<3.0dev,>=1.25.0 in /usr/local/lib/python3.7/dist-packages (from google-api-core[grpc]<3.0.0dev,>=1.29.0->google-cloud-bigquery) (1.35.0)\n",
+            "Requirement already satisfied: googleapis-common-protos<2.0dev,>=1.52.0 in /usr/local/lib/python3.7/dist-packages (from google-api-core[grpc]<3.0.0dev,>=1.29.0->google-cloud-bigquery) (1.53.0)\n",
+            "Requirement already satisfied: setuptools>=40.3.0 in /usr/local/lib/python3.7/dist-packages (from google-api-core[grpc]<3.0.0dev,>=1.29.0->google-cloud-bigquery) (57.4.0)\n",
+            "Requirement already satisfied: grpcio-status<2.0dev,>=1.33.2 in /usr/local/lib/python3.7/dist-packages (from google-api-core[grpc]<3.0.0dev,>=1.29.0->google-cloud-bigquery) (1.41.1)\n",
+            "Requirement already satisfied: cachetools<5.0,>=2.0.0 in /usr/local/lib/python3.7/dist-packages (from google-auth<3.0dev,>=1.25.0->google-api-core[grpc]<3.0.0dev,>=1.29.0->google-cloud-bigquery) (4.2.4)\n",
+            "Requirement already satisfied: pyasn1-modules>=0.2.1 in /usr/local/lib/python3.7/dist-packages (from google-auth<3.0dev,>=1.25.0->google-api-core[grpc]<3.0.0dev,>=1.29.0->google-cloud-bigquery) (0.2.8)\n",
+            "Requirement already satisfied: six>=1.9.0 in /usr/local/lib/python3.7/dist-packages (from google-auth<3.0dev,>=1.25.0->google-api-core[grpc]<3.0.0dev,>=1.29.0->google-cloud-bigquery) (1.15.0)\n",
+            "Requirement already satisfied: rsa<5,>=3.1.4 in /usr/local/lib/python3.7/dist-packages (from google-auth<3.0dev,>=1.25.0->google-api-core[grpc]<3.0.0dev,>=1.29.0->google-cloud-bigquery) (4.7.2)\n",
+            "Requirement already satisfied: google-crc32c<2.0dev,>=1.0 in /usr/local/lib/python3.7/dist-packages (from google-resumable-media<3.0dev,>=0.6.0->google-cloud-bigquery) (1.3.0)\n",
+            "Requirement already satisfied: pyparsing>=2.0.2 in /usr/local/lib/python3.7/dist-packages (from packaging>=14.3->google-cloud-bigquery) (2.4.7)\n",
+            "Requirement already satisfied: pyasn1<0.5.0,>=0.4.6 in /usr/local/lib/python3.7/dist-packages (from pyasn1-modules>=0.2.1->google-auth<3.0dev,>=1.25.0->google-api-core[grpc]<3.0.0dev,>=1.29.0->google-cloud-bigquery) (0.4.8)\n",
+            "Requirement already satisfied: urllib3!=1.25.0,!=1.25.1,<1.26,>=1.21.1 in /usr/local/lib/python3.7/dist-packages (from requests<3.0.0dev,>=2.18.0->google-cloud-bigquery) (1.24.3)\n",
+            "Requirement already satisfied: certifi>=2017.4.17 in /usr/local/lib/python3.7/dist-packages (from requests<3.0.0dev,>=2.18.0->google-cloud-bigquery) (2021.5.30)\n",
+            "Requirement already satisfied: chardet<4,>=3.0.2 in /usr/local/lib/python3.7/dist-packages (from requests<3.0.0dev,>=2.18.0->google-cloud-bigquery) (3.0.4)\n",
+            "Requirement already satisfied: idna<3,>=2.5 in /usr/local/lib/python3.7/dist-packages (from requests<3.0.0dev,>=2.18.0->google-cloud-bigquery) (2.10)\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "_I3cm9s_Sf-B",
+        "outputId": "a0da7bbb-d4d9-4c17-a3af-c0063307b2dd"
+      },
+      "source": [
+        "\n",
+        "! gcloud iam service-accounts create dopoem"
+      ],
+      "execution_count": 10,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "\u001b[1;31mERROR:\u001b[0m (gcloud.iam.service-accounts.create) The required property [project] is not currently set.\n",
+            "It can be set on a per-command basis by re-running your command with the [--project] flag.\n",
+            "\n",
+            "You may set it for your current workspace by running:\n",
+            "\n",
+            "  $ gcloud config set project VALUE\n",
+            "\n",
+            "or it can be set temporarily by the environment variable [CLOUDSDK_CORE_PROJECT]\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "hl6hK75bStqr",
+        "outputId": "3ca8d1ec-0a18-4663-9525-25daa2c0150d"
+      },
+      "source": [
+        "! gcloud projects add-iam-policy-binding dopoem --member=\"serviceAccount:dopoem@dopoem.iam.gserviceaccount.com\" --role=\"roles/owner\""
+      ],
+      "execution_count": 11,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "\u001b[1;31mERROR:\u001b[0m (gcloud.projects.add-iam-policy-binding) You do not currently have an active account selected.\n",
+            "Please run:\n",
+            "\n",
+            "  $ gcloud auth login\n",
+            "\n",
+            "to obtain new credentials.\n",
+            "\n",
+            "If you have already logged in with a different account:\n",
+            "\n",
+            "    $ gcloud config set account ACCOUNT\n",
+            "\n",
+            "to select an already authenticated account to use.\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "ajBtgl-lTHxO",
+        "outputId": "25b56ad7-c006-445e-d666-f9e288b73df6"
+      },
+      "source": [
+        "! gcloud auth login"
+      ],
+      "execution_count": 12,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Go to the following link in your browser:\n",
+            "\n",
+            "    https://accounts.google.com/o/oauth2/auth?response_type=code&client_id=32555940559.apps.googleusercontent.com&redirect_uri=urn%3Aietf%3Awg%3Aoauth%3A2.0%3Aoob&scope=openid+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fappengine.admin+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcompute+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Faccounts.reauth&state=JYBlUeX6TXrG6tEGnukTBGWszKaNBF&prompt=consent&access_type=offline&code_challenge=wYy2uVLEtrt6sp7bOoAR4T3wb760Me7LB2J8tEcNDf0&code_challenge_method=S256\n",
+            "\n",
+            "Enter verification code: 4/1AX4XfWhzje4c9vRqpugRnsVEG2GjUFlw-nDMt2N9ZiBFlcX4nhPeZNvhUDw\n",
+            "\n",
+            "You are now logged in as [hannah.hj.do@gmail.com].\n",
+            "Your current project is [None].  You can change this setting by running:\n",
+            "  $ gcloud config set project PROJECT_ID\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "7tlIEnMyTHsn"
+      },
+      "source": [
+        "! export GOOGLE_APPLICATION_CREDENTIALS=\"/home/user/Downloads\"\n",
+        "\n",
+        "! export GOOGLE_APPLICATION_CREDENTIALS=\"/home/user/Downloads/service-account-file.json\""
+      ],
+      "execution_count": 12,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "O-16-HixVxiz"
+      },
+      "source": [
+        "import os\n",
+        "from google.oauth2 import service_account\n",
+        "\n",
+        "credentials = \"dopoem-f5aa6b994716.json\"\n",
+        "os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = credentials"
+      ],
+      "execution_count": 13,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "SSckqhimSAKc"
+      },
+      "source": [
+        "from google.cloud import bigquery\n",
+        "\n",
+        "client = bigquery.Client()"
+      ],
+      "execution_count": 14,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "lBNaXpYj7ykH"
+      },
+      "source": [
+        "QUERY4 = (\"\"\"\n",
+        "SELECT * FROM (\n",
+        "  SELECT *\n",
+        "  FROM bigquery-public-data.the_met.images img\n",
+        "  LEFT JOIN (\n",
+        "    SELECT \n",
+        "        *\n",
+        "    FROM bigquery-public-data.the_met.vision_api_data\n",
+        "  ) vis\n",
+        "  ON img.object_id = vis.object_id\n",
+        ")\n",
+        "LIMIT 500\n",
+        "\"\"\")"
+      ],
+      "execution_count": 15,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "Kzk11gShSCY-",
+        "outputId": "091f55c6-383a-42a9-ebbd-3cb0e55dfbe9"
+      },
+      "source": [
+        "! pip install validators"
+      ],
+      "execution_count": 16,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Requirement already satisfied: validators in /usr/local/lib/python3.7/dist-packages (0.18.2)\n",
+            "Requirement already satisfied: six>=1.4.0 in /usr/local/lib/python3.7/dist-packages (from validators) (1.15.0)\n",
+            "Requirement already satisfied: decorator>=3.4.0 in /usr/local/lib/python3.7/dist-packages (from validators) (4.4.2)\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "DocF4hqb38DI"
+      },
+      "source": [
+        "!apt-get update # to update ubuntu to correctly run apt install\n",
+        "!apt install chromium-chromedriver\n",
+        "!cp /usr/lib/chromium-browser/chromedriver /usr/bin\n"
+      ],
+      "execution_count": 27,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "wT28JkV-5J3T"
+      },
+      "source": [
+        "def remove_space(string):\n",
+        "    return re.sub(r'\\n', '', string)"
+      ],
+      "execution_count": 33,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "XvzVX9gc54fS",
+        "outputId": "37b1884f-f20a-454b-9d3b-f81a2e190e56"
+      },
+      "source": [
+        "\n",
+        "driver = start_chromedriver()\n",
+        "driver.get('https://www.metmuseum.org/art/collection/search/' + str(11145))\n",
+        "html = driver.page_source\n",
+        "\n",
+        "soup = BeautifulSoup(html, 'html.parser')\n",
+        "time.sleep(1)\n",
+        "temp = []\n",
+        "yo = soup.find('span', 'artwork__title__inset')\n",
+        "# for i in yo:\n",
+        "#   print(i.get_text())\n",
+        "  # print(ar.get_text())\n",
+        "  # temp.append(remove_space(ar.select_one('artwork__title__inset').get_text()))\n",
+        "  # temp.append(remove_space(ar.select_one('artwork__intro__desc').get_text()))\n",
+        "print(yo.text)\n",
+        "driver.quit()"
+      ],
+      "execution_count": 54,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "\n",
+            "The Veteran in a New Field\n",
+            "\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "fLvX3WXz55xh"
+      },
+      "source": [
+        ""
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "4kZKnfrBOqKH",
+        "outputId": "38c21c46-a434-44eb-9a55-6eac9618a413"
+      },
+      "source": [
+        "% time\n",
+        "\n",
+        "import pandas as pd\n",
+        "import validators\n",
+        "import numpy as np\n",
+        "import urllib\n",
+        "import urllib.request\n",
+        "import cv2\n",
+        "from google.colab.patches import cv2_imshow\n",
+        "import io\n",
+        "from io import BytesIO\n",
+        "from numpy import asarray\n",
+        "import requests\n",
+        "import PIL\n",
+        "\n",
+        "\n",
+        "met_images = []\n",
+        "met_id = []\n",
+        "type1 = []\n",
+        "type2 = []\n",
+        "type3 = []\n",
+        "type4 = []\n",
+        "color1 = []\n",
+        "color2 = []\n",
+        "color3 = []\n",
+        "title = []\n",
+        "text = []\n",
+        "\n",
+        "query_job4 = client.query(QUERY4)\n",
+        "rows4 = query_job4.result()\n",
+        "\n",
+        "def url_to_image(link):\n",
+        "\n",
+        "  response = requests.get(link)\n",
+        "  if response.status_code == 200:\n",
+        "    image_bytes = io.BytesIO(response.content)\n",
+        "    img = PIL.Image.open(image_bytes)\n",
+        "    return img\n",
+        "  else:\n",
+        "    return None\n",
+        "\n",
+        "\n",
+        "for i in rows4:\n",
+        "\n",
+        "      image = url_to_image(i[3])\n",
+        "      if image != None:\n",
+        "        met_id.append(i[0])\n",
+        "        img_numpy = asarray(image)\n",
+        "        met_images.append(img_numpy)\n",
+        "\n",
+        "\n",
+        "      driver = start_chromedriver()\n",
+        "      driver.get('https://www.metmuseum.org/art/collection/search/' + str(i[0]))\n",
+        "      html = driver.page_source\n",
+        "\n",
+        "      soup = BeautifulSoup(html, 'html.parser')\n",
+        "      temp = []\n",
+        " \n",
+        "      title.append(soup.find('span', 'artwork__title__inset').text)\n",
+        "      text.append(soup.find('div', 'artwork__intro__desc').text)\n",
+        "\n",
+        "      driver.quit()\n",
+        "\n",
+        "      try:\n",
+        "        type1.append(i[12][0]['description'])\n",
+        "      except:\n",
+        "        type1.append(None)\n",
+        "      try:\n",
+        "        type2.append(i[12][1]['description'])\n",
+        "      except:\n",
+        "        type2.append(None)\n",
+        "      try:\n",
+        "        type3.append(i[12][2]['description'])\n",
+        "      except:\n",
+        "        type3.append(None)\n",
+        "      try:\n",
+        "        type4.append(i[12][3]['description'])\n",
+        "      except:\n",
+        "        type4.append(None)\n",
+        "\n",
+        "      color1.append(hex2name((i[15]['dominantColors']['colors'][0]['color']['blue'],\\\n",
+        "              i[15]['dominantColors']['colors'][0]['color']['green'],\\\n",
+        "              i[15]['dominantColors']['colors'][0]['color']['red'])))\n",
+        "\n",
+        "      color2.append(hex2name((i[15]['dominantColors']['colors'][1]['color']['blue'],\\\n",
+        "              i[15]['dominantColors']['colors'][1]['color']['green'],\\\n",
+        "              i[15]['dominantColors']['colors'][1]['color']['red'])))\n",
+        "      \n",
+        "      color3.append(hex2name((i[15]['dominantColors']['colors'][2]['color']['blue'],\\\n",
+        "              i[15]['dominantColors']['colors'][2]['color']['green'],\\\n",
+        "              i[15]['dominantColors']['colors'][2]['color']['red'])))"
+      ],
+      "execution_count": 57,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "CPU times: user 2 µs, sys: 0 ns, total: 2 µs\n",
+            "Wall time: 8.34 µs\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "aGA5NH-JTLJI"
+      },
+      "source": [
+        "query_job4 = client.query(QUERY4)\n",
+        "rows4 = query_job4.result()\n",
+        "\n",
+        "total_metid = []\n",
+        "\n",
+        "for i in rows4:\n",
+        "  total_metid.append(i[0])"
+      ],
+      "execution_count": 67,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "XIdo8Lujm5f8"
+      },
+      "source": [
+        "met_collection = pd.DataFrame()\n",
+        "met_collection['id'] = met_id\n",
+        "met_collection['images'] = met_images\n",
+        "\n",
+        "\n"
+      ],
+      "execution_count": 60,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "r9FLU6zTTUAi"
+      },
+      "source": [
+        "met_collection.to_csv('met_collec_images.csv', index=False)  "
+      ],
+      "execution_count": 77,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "w5OIlw5fT3nG",
+        "outputId": "43eb5b75-fb33-44f4-ba0e-81678726dbfa"
+      },
+      "source": [
+        "from google.colab import drive\n",
+        "drive.mount('/content/gdrive')"
+      ],
+      "execution_count": 71,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Mounted at /content/gdrive\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "p6NVJcSHUNJs"
+      },
+      "source": [
+        "!cp met_collec_images.csv /content/gdrive/My\\ Drive"
+      ],
+      "execution_count": 78,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "f0oJZV1JkAmu",
+        "outputId": "9e1386c2-a98b-474e-ff20-420b1e65ba52"
+      },
+      "source": [
+        "len(met_id), len(met_images), len(type1), len(type4), len(color1), len(color3), len(text)"
+      ],
+      "execution_count": 65,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "(468, 468, 500, 500, 500, 500, 500)"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 65
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "Cc6ZlqbjS5Ue"
+      },
+      "source": [
+        "met_collec_data = pd.DataFrame()\n",
+        "met_collec_data['id'] = total_metid\n",
+        "met_collec_data['type1'] = type1\n",
+        "met_collec_data['type2'] = type2\n",
+        "met_collec_data['type3'] = type3\n",
+        "met_collec_data['type4'] = type4\n",
+        "met_collec_data['color1'] = color1\n",
+        "met_collec_data['color2'] = color2\n",
+        "met_collec_data['color3'] = color3\n",
+        "met_collec_data['title'] = title\n",
+        "met_collec_data['text'] = text"
+      ],
+      "execution_count": 79,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "YuVO4ctNVFy7"
+      },
+      "source": [
+        "met_collec_data['text'] = met_collec_data['text'].apply(remove_space)\n",
+        "met_collec_data['title'] = met_collec_data['title'].apply(remove_space)\n"
+      ],
+      "execution_count": 82,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 202
+        },
+        "id": "ru1pds0WVN6t",
+        "outputId": "95a1f908-bf57-4060-c7cc-d631b19b4557"
+      },
+      "source": [
+        "met_collec_data.head()"
+      ],
+      "execution_count": 83,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/html": [
+              "<div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>id</th>\n",
+              "      <th>type1</th>\n",
+              "      <th>type2</th>\n",
+              "      <th>type3</th>\n",
+              "      <th>type4</th>\n",
+              "      <th>color1</th>\n",
+              "      <th>color2</th>\n",
+              "      <th>color3</th>\n",
+              "      <th>title</th>\n",
+              "      <th>text</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>437065</td>\n",
+              "      <td>ancient history</td>\n",
+              "      <td>art</td>\n",
+              "      <td>abbot</td>\n",
+              "      <td>temple</td>\n",
+              "      <td>steelblue</td>\n",
+              "      <td>black</td>\n",
+              "      <td>darkslateblue</td>\n",
+              "      <td>Saint Paul</td>\n",
+              "      <td>Converted to Christianity on the road to Damas...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>1</th>\n",
+              "      <td>438427</td>\n",
+              "      <td>painting</td>\n",
+              "      <td>modern art</td>\n",
+              "      <td>art</td>\n",
+              "      <td>mythology</td>\n",
+              "      <td>darkslategray</td>\n",
+              "      <td>black</td>\n",
+              "      <td>lightsteelblue</td>\n",
+              "      <td>The Lamentation</td>\n",
+              "      <td>In this astonishing painting, Christ has been ...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>2</th>\n",
+              "      <td>212207</td>\n",
+              "      <td>font</td>\n",
+              "      <td>drawing</td>\n",
+              "      <td>sketch</td>\n",
+              "      <td>art</td>\n",
+              "      <td>gray</td>\n",
+              "      <td>darkslategray</td>\n",
+              "      <td>snow</td>\n",
+              "      <td>Candlestick</td>\n",
+              "      <td></td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>3</th>\n",
+              "      <td>209192</td>\n",
+              "      <td>sketch</td>\n",
+              "      <td>drawing</td>\n",
+              "      <td>figure drawing</td>\n",
+              "      <td>arm</td>\n",
+              "      <td>darkgray</td>\n",
+              "      <td>gray</td>\n",
+              "      <td>dimgray</td>\n",
+              "      <td>Panel (part of a set)</td>\n",
+              "      <td></td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>4</th>\n",
+              "      <td>189834</td>\n",
+              "      <td>black and white</td>\n",
+              "      <td>sketch</td>\n",
+              "      <td>drawing</td>\n",
+              "      <td>silver</td>\n",
+              "      <td>silver</td>\n",
+              "      <td>darkgray</td>\n",
+              "      <td>gray</td>\n",
+              "      <td>Pair of shoes</td>\n",
+              "      <td></td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>"
+            ],
+            "text/plain": [
+              "       id  ...                                               text\n",
+              "0  437065  ...  Converted to Christianity on the road to Damas...\n",
+              "1  438427  ...  In this astonishing painting, Christ has been ...\n",
+              "2  212207  ...                                                   \n",
+              "3  209192  ...                                                   \n",
+              "4  189834  ...                                                   \n",
+              "\n",
+              "[5 rows x 10 columns]"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 83
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "uxfJ-oAPVQTo"
+      },
+      "source": [
+        "met_collec_data.to_csv('met_collec_data.csv', index=False) "
+      ],
+      "execution_count": 84,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "qg0yaT97VeM4"
+      },
+      "source": [
+        "!cp met_collec_data.csv /content/gdrive/My\\ Drive"
+      ],
+      "execution_count": 85,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "Q4xeZP1mb74n"
+      },
+      "source": [
+        "total_met_collec = met_collection.merge(met_collec_data, on='id', how='left')"
+      ],
+      "execution_count": 87,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 285
+        },
+        "id": "nG0ojGuUWUGy",
+        "outputId": "c9f37e46-662c-4411-906d-ccc63ae6ab60"
+      },
+      "source": [
+        "total_met_collec.head()"
+      ],
+      "execution_count": 89,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/html": [
+              "<div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>id</th>\n",
+              "      <th>images</th>\n",
+              "      <th>type1</th>\n",
+              "      <th>type2</th>\n",
+              "      <th>type3</th>\n",
+              "      <th>type4</th>\n",
+              "      <th>color1</th>\n",
+              "      <th>color2</th>\n",
+              "      <th>color3</th>\n",
+              "      <th>title</th>\n",
+              "      <th>text</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>209192</td>\n",
+              "      <td>[[[199, 199, 199], [199, 199, 199], [200, 200,...</td>\n",
+              "      <td>sketch</td>\n",
+              "      <td>drawing</td>\n",
+              "      <td>figure drawing</td>\n",
+              "      <td>arm</td>\n",
+              "      <td>darkgray</td>\n",
+              "      <td>gray</td>\n",
+              "      <td>dimgray</td>\n",
+              "      <td>Panel (part of a set)</td>\n",
+              "      <td></td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>1</th>\n",
+              "      <td>189834</td>\n",
+              "      <td>[[[255, 255, 255], [254, 254, 254], [253, 253,...</td>\n",
+              "      <td>black and white</td>\n",
+              "      <td>sketch</td>\n",
+              "      <td>drawing</td>\n",
+              "      <td>silver</td>\n",
+              "      <td>silver</td>\n",
+              "      <td>darkgray</td>\n",
+              "      <td>gray</td>\n",
+              "      <td>Pair of shoes</td>\n",
+              "      <td></td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>2</th>\n",
+              "      <td>191926</td>\n",
+              "      <td>[[[212, 212, 212], [212, 212, 212], [211, 211,...</td>\n",
+              "      <td>black and white</td>\n",
+              "      <td>vase</td>\n",
+              "      <td>lighting</td>\n",
+              "      <td>dishware</td>\n",
+              "      <td>darkgray</td>\n",
+              "      <td>silver</td>\n",
+              "      <td>gray</td>\n",
+              "      <td>Sugar bowl with cover</td>\n",
+              "      <td></td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>3</th>\n",
+              "      <td>188030</td>\n",
+              "      <td>[[[200, 200, 200], [199, 199, 199], [200, 200,...</td>\n",
+              "      <td>money</td>\n",
+              "      <td>coin</td>\n",
+              "      <td>currency</td>\n",
+              "      <td>silver</td>\n",
+              "      <td>lightslategray</td>\n",
+              "      <td>gray</td>\n",
+              "      <td>silver</td>\n",
+              "      <td>In Honor of the 50th Birthday of the Poet and ...</td>\n",
+              "      <td></td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>4</th>\n",
+              "      <td>188502</td>\n",
+              "      <td>[[[231, 231, 231], [232, 232, 232], [231, 231,...</td>\n",
+              "      <td>money</td>\n",
+              "      <td>currency</td>\n",
+              "      <td>coin</td>\n",
+              "      <td>silver</td>\n",
+              "      <td>dimgray</td>\n",
+              "      <td>dimgray</td>\n",
+              "      <td>lightslategray</td>\n",
+              "      <td>Die</td>\n",
+              "      <td></td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>"
+            ],
+            "text/plain": [
+              "       id  ... text\n",
+              "0  209192  ...     \n",
+              "1  189834  ...     \n",
+              "2  191926  ...     \n",
+              "3  188030  ...     \n",
+              "4  188502  ...     \n",
+              "\n",
+              "[5 rows x 11 columns]"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 89
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "QfcPHN4VV_iW"
+      },
+      "source": [
+        "total_met_collec.to_csv('total_met_data.csv', index=False) \n",
+        "\n",
+        "!cp total_met_data.csv /content/gdrive/My\\ Drive"
+      ],
+      "execution_count": 90,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "BCORNImoWi06"
+      },
+      "source": [
+        ""
+      ],
+      "execution_count": null,
+      "outputs": []
+    }
+  ]
+}
