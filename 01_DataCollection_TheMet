@@ -1,0 +1,766 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "name": "dopoem.ipynb",
+      "provenance": [],
+      "collapsed_sections": [],
+      "authorship_tag": "ABX9TyNPEKQ5G7WoCWUhJyaPwHTi",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    },
+    "accelerator": "GPU"
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/doguma/domet/blob/main/01_DataCollection_TheMet\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "CRBaJTsWLUjB"
+      },
+      "source": [
+        "import os, time, sys\n",
+        "import cv2, keras, glob\n",
+        "import pandas as pd\n",
+        "import numpy as np\n",
+        "import matplotlib.pyplot as plt\n",
+        "import tensorflow as tf\n",
+        "from collections import Counter\n",
+        "\n",
+        "from google.oauth2 import service_account\n",
+        "from google.cloud import bigquery\n",
+        "\n",
+        "import re\n",
+        "import webcolors\n",
+        "from selenium import webdriver\n",
+        "from selenium.webdriver.common.keys import Keys\n",
+        "from bs4 import BeautifulSoup\n",
+        "from PIL import Image, ImageColor\n",
+        "\n",
+        "from sklearn.cluster import KMeans\n",
+        "from sklearn.metrics import mean_squared_error"
+      ],
+      "execution_count": 1,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "kBIEthy12B9Q"
+      },
+      "source": [
+        "! pip install selenium\n",
+        "! pip install webcolors\n",
+        "! pip install -e git+https://github.com/SohierDane/BigQuery_Helper\n",
+        "! pip install --upgrade google-cloud-bigquery\n",
+        "\n",
+        "! pip install validators\n",
+        "\n",
+        "! apt-get update\n",
+        "! apt install chromium-chromedriver\n",
+        "! cp /usr/lib/chromium-browser/chromedriver /usr/bin"
+      ],
+      "execution_count": 91,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "cDIr-JKlaK0F"
+      },
+      "source": [
+        "from google.colab import drive\n",
+        "drive.mount('/content/gdrive')"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "HLqlV0w111TO"
+      },
+      "source": [
+        "def start_chromedriver():\n",
+        "    sys.path.insert(0,'/usr/lib/chromium-browser/chromedriver')\n",
+        "    chrome_options = webdriver.ChromeOptions()\n",
+        "    chrome_options.add_argument('--headless')\n",
+        "    chrome_options.add_argument('--no-sandbox')\n",
+        "    chrome_options.add_argument('--disable-dev-shm-usage')\n",
+        "\n",
+        "    driver = webdriver.Chrome('chromedriver', options=chrome_options)\n",
+        "    \n",
+        "    return driver"
+      ],
+      "execution_count": 46,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "NSQ-T3HAOqAW"
+      },
+      "source": [
+        "# Hex to RGB Conversion\n",
+        "# Source: https://gist.github.com/kb22/f17e59a79d4fcca02188c23cca932be5#file-rgb2hex-py\n",
+        "\n",
+        "def hex2name(c):\n",
+        "    h_color = '#{:02x}{:02x}{:02x}'.format(int(c[0]), int(c[1]), int(c[2]))\n",
+        "\n",
+        "    rms_lst = []\n",
+        "    for img_clr, img_hex in webcolors.CSS3_NAMES_TO_HEX.items():\n",
+        "        cur_clr = webcolors.hex_to_rgb(img_hex)\n",
+        "        rmse = np.sqrt(mean_squared_error(c, cur_clr))\n",
+        "        rms_lst.append(rmse)\n",
+        "\n",
+        "    closest_color = rms_lst.index(min(rms_lst))\n",
+        "\n",
+        "    nm = list(webcolors.CSS3_NAMES_TO_HEX.items())[closest_color][0]\n",
+        "\n",
+        "    return nm"
+      ],
+      "execution_count": 9,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "_I3cm9s_Sf-B"
+      },
+      "source": [
+        "# connecting to google cloud platform\n",
+        "\n",
+        "! gcloud iam service-accounts create dopoem\n",
+        "! gcloud projects add-iam-policy-binding dopoem --member=\"serviceAccount:dopoem@dopoem.iam.gserviceaccount.com\" --role=\"roles/owner\"\n",
+        "! gcloud auth login\n",
+        "\n",
+        "! export GOOGLE_APPLICATION_CREDENTIALS=\"/home/user/Downloads\"\n",
+        "! export GOOGLE_APPLICATION_CREDENTIALS=\"/home/user/Downloads/service-account-file.json\""
+      ],
+      "execution_count": 92,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "O-16-HixVxiz"
+      },
+      "source": [
+        "credentials = \"dopoem-f5aa6b994716.json\"\n",
+        "os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = credentials"
+      ],
+      "execution_count": 13,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "SSckqhimSAKc"
+      },
+      "source": [
+        "# Google Cloud's client to pull data\n",
+        "\n",
+        "client = bigquery.Client()"
+      ],
+      "execution_count": 14,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "lBNaXpYj7ykH"
+      },
+      "source": [
+        "# Querying images and vision_api_data from \"bigquery-public-data\"\n",
+        "\n",
+        "QUERY4 = (\"\"\"\n",
+        "SELECT * FROM (\n",
+        "  SELECT *\n",
+        "  FROM bigquery-public-data.the_met.images img\n",
+        "  LEFT JOIN (\n",
+        "    SELECT \n",
+        "        *\n",
+        "    FROM bigquery-public-data.the_met.vision_api_data\n",
+        "  ) vis\n",
+        "  ON img.object_id = vis.object_id\n",
+        ")\n",
+        "LIMIT 500\n",
+        "\"\"\")"
+      ],
+      "execution_count": 15,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "wT28JkV-5J3T"
+      },
+      "source": [
+        "def remove_space(string):\n",
+        "    return re.sub(r'\\n', '', string)"
+      ],
+      "execution_count": 33,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "4j9gQAgvZdNf"
+      },
+      "source": [
+        "hello, bye, good = [], [], []"
+      ],
+      "execution_count": 93,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "43B8KwTXZgWl"
+      },
+      "source": [
+        "bye.append('so')"
+      ],
+      "execution_count": 94,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "0s1dkOJYZian",
+        "outputId": "d6f5dcd5-7394-40e8-abda-a8a7d5b1d3b4"
+      },
+      "source": [
+        "bye"
+      ],
+      "execution_count": 95,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "['so']"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 95
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "4kZKnfrBOqKH",
+        "outputId": "38c21c46-a434-44eb-9a55-6eac9618a413"
+      },
+      "source": [
+        "% time\n",
+        "\n",
+        "import pandas as pd\n",
+        "import validators\n",
+        "import numpy as np\n",
+        "import urllib\n",
+        "import urllib.request\n",
+        "import cv2\n",
+        "from google.colab.patches import cv2_imshow\n",
+        "import io\n",
+        "from io import BytesIO\n",
+        "from numpy import asarray\n",
+        "import requests\n",
+        "import PIL\n",
+        "\n",
+        "met_images, met_id, type1, type2, type3, type4, color1, color2, color3, title, text = [], [], [], [], [], [], [], [], [], [], []\n",
+        "\n",
+        "query_job4 = client.query(QUERY4)\n",
+        "rows4 = query_job4.result()\n",
+        "\n",
+        "\n",
+        "def url_to_image(link):\n",
+        "  response = requests.get(link)\n",
+        "  # get image links that only respond with status code of 200\n",
+        "  # ignore the 'not found' pages\n",
+        "  if response.status_code == 200:\n",
+        "    image_bytes = io.BytesIO(response.content)\n",
+        "    img = PIL.Image.open(image_bytes)\n",
+        "    return img\n",
+        "  else:\n",
+        "    return None\n",
+        "\n",
+        "\n",
+        "for i in rows4:\n",
+        "\n",
+        "      image = url_to_image(i[3])\n",
+        "      if image != None:\n",
+        "        met_id.append(i[0])\n",
+        "        img_numpy = asarray(image)\n",
+        "        met_images.append(img_numpy)\n",
+        "\n",
+        "      driver = start_chromedriver()\n",
+        "      driver.get('https://www.metmuseum.org/art/collection/search/' + str(i[0]))\n",
+        "      html = driver.page_source\n",
+        "\n",
+        "      soup = BeautifulSoup(html, 'html.parser')\n",
+        " \n",
+        "      title.append(soup.find('span', 'artwork__title__inset').text)\n",
+        "      text.append(soup.find('div', 'artwork__intro__desc').text)\n",
+        "\n",
+        "      driver.quit()\n",
+        "\n",
+        "      # try and except due to missing values\n",
+        "      try:\n",
+        "        type1.append(i[12][0]['description'])\n",
+        "      except:\n",
+        "        type1.append(None)\n",
+        "      try:\n",
+        "        type2.append(i[12][1]['description'])\n",
+        "      except:\n",
+        "        type2.append(None)\n",
+        "      try:\n",
+        "        type3.append(i[12][2]['description'])\n",
+        "      except:\n",
+        "        type3.append(None)\n",
+        "      try:\n",
+        "        type4.append(i[12][3]['description'])\n",
+        "      except:\n",
+        "        type4.append(None)\n",
+        "\n",
+        "      # I should use functions more next time..\n",
+        "      color1.append(hex2name((i[15]['dominantColors']['colors'][0]['color']['blue'],\\\n",
+        "              i[15]['dominantColors']['colors'][0]['color']['green'],\\\n",
+        "              i[15]['dominantColors']['colors'][0]['color']['red'])))\n",
+        "\n",
+        "      color2.append(hex2name((i[15]['dominantColors']['colors'][1]['color']['blue'],\\\n",
+        "              i[15]['dominantColors']['colors'][1]['color']['green'],\\\n",
+        "              i[15]['dominantColors']['colors'][1]['color']['red'])))\n",
+        "      \n",
+        "      color3.append(hex2name((i[15]['dominantColors']['colors'][2]['color']['blue'],\\\n",
+        "              i[15]['dominantColors']['colors'][2]['color']['green'],\\\n",
+        "              i[15]['dominantColors']['colors'][2]['color']['red'])))"
+      ],
+      "execution_count": 57,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "CPU times: user 2 µs, sys: 0 ns, total: 2 µs\n",
+            "Wall time: 8.34 µs\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "aGA5NH-JTLJI"
+      },
+      "source": [
+        "query_job4 = client.query(QUERY4)\n",
+        "rows4 = query_job4.result()\n",
+        "\n",
+        "total_metid = []\n",
+        "\n",
+        "for i in rows4:\n",
+        "  total_metid.append(i[0])"
+      ],
+      "execution_count": 67,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "XIdo8Lujm5f8"
+      },
+      "source": [
+        "met_collection = pd.DataFrame()\n",
+        "met_collection['id'] = met_id\n",
+        "met_collection['images'] = met_images"
+      ],
+      "execution_count": 60,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "r9FLU6zTTUAi"
+      },
+      "source": [
+        "# saving id and images data as a csv file\n",
+        "met_collection.to_csv('met_collec_images.csv', index=False)  \n",
+        "!cp met_collec_images.csv /content/gdrive/My\\ Drive"
+      ],
+      "execution_count": 77,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "Cc6ZlqbjS5Ue"
+      },
+      "source": [
+        "met_collec_data = pd.DataFrame()\n",
+        "met_collec_data['id'] = total_metid\n",
+        "met_collec_data['type1'] = type1\n",
+        "met_collec_data['type2'] = type2\n",
+        "met_collec_data['type3'] = type3\n",
+        "met_collec_data['type4'] = type4\n",
+        "met_collec_data['color1'] = color1\n",
+        "met_collec_data['color2'] = color2\n",
+        "met_collec_data['color3'] = color3\n",
+        "met_collec_data['title'] = title\n",
+        "met_collec_data['text'] = text"
+      ],
+      "execution_count": 79,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "YuVO4ctNVFy7"
+      },
+      "source": [
+        "met_collec_data['text'] = met_collec_data['text'].apply(remove_space)\n",
+        "met_collec_data['title'] = met_collec_data['title'].apply(remove_space)"
+      ],
+      "execution_count": 82,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 202
+        },
+        "id": "ru1pds0WVN6t",
+        "outputId": "95a1f908-bf57-4060-c7cc-d631b19b4557"
+      },
+      "source": [
+        "met_collec_data.head()"
+      ],
+      "execution_count": 83,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/html": [
+              "<div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>id</th>\n",
+              "      <th>type1</th>\n",
+              "      <th>type2</th>\n",
+              "      <th>type3</th>\n",
+              "      <th>type4</th>\n",
+              "      <th>color1</th>\n",
+              "      <th>color2</th>\n",
+              "      <th>color3</th>\n",
+              "      <th>title</th>\n",
+              "      <th>text</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>437065</td>\n",
+              "      <td>ancient history</td>\n",
+              "      <td>art</td>\n",
+              "      <td>abbot</td>\n",
+              "      <td>temple</td>\n",
+              "      <td>steelblue</td>\n",
+              "      <td>black</td>\n",
+              "      <td>darkslateblue</td>\n",
+              "      <td>Saint Paul</td>\n",
+              "      <td>Converted to Christianity on the road to Damas...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>1</th>\n",
+              "      <td>438427</td>\n",
+              "      <td>painting</td>\n",
+              "      <td>modern art</td>\n",
+              "      <td>art</td>\n",
+              "      <td>mythology</td>\n",
+              "      <td>darkslategray</td>\n",
+              "      <td>black</td>\n",
+              "      <td>lightsteelblue</td>\n",
+              "      <td>The Lamentation</td>\n",
+              "      <td>In this astonishing painting, Christ has been ...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>2</th>\n",
+              "      <td>212207</td>\n",
+              "      <td>font</td>\n",
+              "      <td>drawing</td>\n",
+              "      <td>sketch</td>\n",
+              "      <td>art</td>\n",
+              "      <td>gray</td>\n",
+              "      <td>darkslategray</td>\n",
+              "      <td>snow</td>\n",
+              "      <td>Candlestick</td>\n",
+              "      <td></td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>3</th>\n",
+              "      <td>209192</td>\n",
+              "      <td>sketch</td>\n",
+              "      <td>drawing</td>\n",
+              "      <td>figure drawing</td>\n",
+              "      <td>arm</td>\n",
+              "      <td>darkgray</td>\n",
+              "      <td>gray</td>\n",
+              "      <td>dimgray</td>\n",
+              "      <td>Panel (part of a set)</td>\n",
+              "      <td></td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>4</th>\n",
+              "      <td>189834</td>\n",
+              "      <td>black and white</td>\n",
+              "      <td>sketch</td>\n",
+              "      <td>drawing</td>\n",
+              "      <td>silver</td>\n",
+              "      <td>silver</td>\n",
+              "      <td>darkgray</td>\n",
+              "      <td>gray</td>\n",
+              "      <td>Pair of shoes</td>\n",
+              "      <td></td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>"
+            ],
+            "text/plain": [
+              "       id  ...                                               text\n",
+              "0  437065  ...  Converted to Christianity on the road to Damas...\n",
+              "1  438427  ...  In this astonishing painting, Christ has been ...\n",
+              "2  212207  ...                                                   \n",
+              "3  209192  ...                                                   \n",
+              "4  189834  ...                                                   \n",
+              "\n",
+              "[5 rows x 10 columns]"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 83
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "uxfJ-oAPVQTo"
+      },
+      "source": [
+        "# saving id and image details data as a csv file\n",
+        "met_collec_data.to_csv('met_collec_data.csv', index=False) \n",
+        "!cp met_collec_data.csv /content/gdrive/My\\ Drive"
+      ],
+      "execution_count": 84,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 285
+        },
+        "id": "Q4xeZP1mb74n",
+        "outputId": "016e6115-1ef9-4f92-97f1-dc1451cb7e97"
+      },
+      "source": [
+        "# merge two dataframes by id\n",
+        "total_met_collec = met_collection.merge(met_collec_data, on='id', how='left')\n",
+        "total_met_collec.head()"
+      ],
+      "execution_count": 96,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/html": [
+              "<div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>id</th>\n",
+              "      <th>images</th>\n",
+              "      <th>type1</th>\n",
+              "      <th>type2</th>\n",
+              "      <th>type3</th>\n",
+              "      <th>type4</th>\n",
+              "      <th>color1</th>\n",
+              "      <th>color2</th>\n",
+              "      <th>color3</th>\n",
+              "      <th>title</th>\n",
+              "      <th>text</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>209192</td>\n",
+              "      <td>[[[199, 199, 199], [199, 199, 199], [200, 200,...</td>\n",
+              "      <td>sketch</td>\n",
+              "      <td>drawing</td>\n",
+              "      <td>figure drawing</td>\n",
+              "      <td>arm</td>\n",
+              "      <td>darkgray</td>\n",
+              "      <td>gray</td>\n",
+              "      <td>dimgray</td>\n",
+              "      <td>Panel (part of a set)</td>\n",
+              "      <td></td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>1</th>\n",
+              "      <td>189834</td>\n",
+              "      <td>[[[255, 255, 255], [254, 254, 254], [253, 253,...</td>\n",
+              "      <td>black and white</td>\n",
+              "      <td>sketch</td>\n",
+              "      <td>drawing</td>\n",
+              "      <td>silver</td>\n",
+              "      <td>silver</td>\n",
+              "      <td>darkgray</td>\n",
+              "      <td>gray</td>\n",
+              "      <td>Pair of shoes</td>\n",
+              "      <td></td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>2</th>\n",
+              "      <td>191926</td>\n",
+              "      <td>[[[212, 212, 212], [212, 212, 212], [211, 211,...</td>\n",
+              "      <td>black and white</td>\n",
+              "      <td>vase</td>\n",
+              "      <td>lighting</td>\n",
+              "      <td>dishware</td>\n",
+              "      <td>darkgray</td>\n",
+              "      <td>silver</td>\n",
+              "      <td>gray</td>\n",
+              "      <td>Sugar bowl with cover</td>\n",
+              "      <td></td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>3</th>\n",
+              "      <td>188030</td>\n",
+              "      <td>[[[200, 200, 200], [199, 199, 199], [200, 200,...</td>\n",
+              "      <td>money</td>\n",
+              "      <td>coin</td>\n",
+              "      <td>currency</td>\n",
+              "      <td>silver</td>\n",
+              "      <td>lightslategray</td>\n",
+              "      <td>gray</td>\n",
+              "      <td>silver</td>\n",
+              "      <td>In Honor of the 50th Birthday of the Poet and ...</td>\n",
+              "      <td></td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>4</th>\n",
+              "      <td>188502</td>\n",
+              "      <td>[[[231, 231, 231], [232, 232, 232], [231, 231,...</td>\n",
+              "      <td>money</td>\n",
+              "      <td>currency</td>\n",
+              "      <td>coin</td>\n",
+              "      <td>silver</td>\n",
+              "      <td>dimgray</td>\n",
+              "      <td>dimgray</td>\n",
+              "      <td>lightslategray</td>\n",
+              "      <td>Die</td>\n",
+              "      <td></td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>"
+            ],
+            "text/plain": [
+              "       id  ... text\n",
+              "0  209192  ...     \n",
+              "1  189834  ...     \n",
+              "2  191926  ...     \n",
+              "3  188030  ...     \n",
+              "4  188502  ...     \n",
+              "\n",
+              "[5 rows x 11 columns]"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 96
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "QfcPHN4VV_iW"
+      },
+      "source": [
+        "# saving combined dataframe - total met data as a csv file\n",
+        "total_met_collec.to_csv('total_met_data.csv', index=False) \n",
+        "!cp total_met_data.csv /content/gdrive/My\\ Drive"
+      ],
+      "execution_count": 90,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "BCORNImoWi06"
+      },
+      "source": [
+        ""
+      ],
+      "execution_count": null,
+      "outputs": []
+    }
+  ]
+}
