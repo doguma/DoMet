@@ -1,5 +1,7 @@
 # DoMet : Predict the Artifact's Origin
-## Classification of archaic objects from The Met Collection (VGG16 model)
+**Classification of archaic objects from The Met Collection (VGG16 model)**
+Medium Article : https://medium.com/@hannah.hj.do/predict-the-artifacts-origin-with-vgg16-model-the-met-collection-77ad25cf67a4
+
 
 <img src="/ppt/0.jpg?raw=true">
 
